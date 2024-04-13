@@ -189,11 +189,42 @@
                     this.$refs.copyTxt.select()
                 }, upload: function (t) {
                     var e = this, o = new FormData;
-                    o.append("file", t), r.a.post("/upload", o).then((function (t) {
-                        200 === t.status ? (e.status = "done", e.imgUrl = location.origin + t.data[0].src) : e.showError()
-                    })).catch((function () {
-                        e.showError()
-                    }))
+                    e.checkFile(t).then(result => {
+                        switch (result.type) {
+                            case 'image':
+                                if (result.sizeExceeded) {
+                                    console.log('上传的图片大小超过了5M!B');
+                                    alert('上传的图片大小超过了5MB!');
+                                } else {
+                                    console.log('上传的是图片，且大小符合要求');
+                                    o.append("file", t), r.a.post("/upload", o).then((function (t) {
+                                        200 === t.status ? (e.status = "done", e.imgUrl = location.origin + t.data[0].src) : e.showError()
+                                    })).catch((function () {
+                                        e.showError()
+                                    }))
+                                }
+                                break;
+                            case 'video':
+                                if (result.sizeExceeded) {
+                                    console.log('上传的视频大小超过了2GB!');
+                                    alert('上传的视频大小超过了2GB!')
+                                } else {
+                                    console.log('上传的是视频，且大小符合要求');
+                                    o.append("file", t), r.a.post("/upload", o).then((function (t) {
+                                        200 === t.status ? (e.status = "done", e.imgUrl = location.origin + t.data[0].src) : e.showError()
+                                    })).catch((function () {
+                                        e.showError()
+                                    }))
+                                }
+                                break;
+                            case 'other':
+                                console.log('上传的文件不是图片也不是视频');
+                                break;
+                        }
+                    }).catch(error => {
+                        console.error('发生错误：', error);
+                    });
+
                 }, clear: function () {
                     this.file = {}, document.getElementById("upFiles").value = "", this.status = "waitting"
                 }, showError: function () {
@@ -201,7 +232,42 @@
                     this.status = "error", setTimeout((function () {
                         t.clear()
                     }), 2e3)
-                }
+                }, checkFile: function (file) {
+                    return new Promise((resolve, reject) => {
+                        // 获取文件类型
+                        const fileType = file.type;
+
+                        // 判断文件类型是否为图片
+                        const isImage = fileType.startsWith('image/');
+
+                        // 判断文件类型是否为视频
+                        const isVideo = fileType.startsWith('video/');
+
+                        // 获取文件大小
+                        const fileSize = file.size;
+
+                        if (isImage) {
+                            // 如果是图片，判断大小是否大于5MB
+                            if (fileSize > 5 * 1024 * 1024) {
+                                resolve({ type: 'image', sizeExceeded: true });
+                            } else {
+                                resolve({ type: 'image', sizeExceeded: false });
+                            }
+                        } else if (isVideo) {
+                            // 如果是视频，判断大小是否大于2GB
+                            if (fileSize > 2 * 1024 * 1024 * 1024) {
+                                resolve({ type: 'video', sizeExceeded: true });
+                            } else {
+                                resolve({ type: 'video', sizeExceeded: false });
+                            }
+                        } else {
+                            // 如果不是图片也不是视频
+                            resolve({ type: 'other' });
+                        }
+                    });
+
+
+                },
             }
         }, w = (o(332), {
             head: {title: "Telegraph-Image|免费图床"}, components: {
